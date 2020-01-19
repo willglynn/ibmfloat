@@ -1,26 +1,66 @@
+#[cfg(not(feature = "std"))]
+use core::{
+    mem::size_of,
+    ops::{BitAnd, Not, Shl, Shr, Sub},
+};
+#[cfg(feature = "std")]
+use std::{
+    mem::size_of,
+    ops::{BitAnd, Not, Shl, Shr, Sub},
+};
+
+trait Uint:
+    Copy
+    + Sized
+    + BitAnd<Self, Output = Self>
+    + Shr<u8, Output = Self>
+    + Shl<u8, Output = Self>
+    + Not<Output = Self>
+    + Sub<Self, Output = Self>
+    + From<u8>
+{
+    const MAX: Self;
+}
+
+impl Uint for u32 {
+    const MAX: u32 = u32::max_value();
+}
+impl Uint for u64 {
+    const MAX: u64 = u64::max_value();
+}
+
+/// Split an IBM float represented at uint U into its (sign, exponent, fraction).
+/// Sign and fraction are left in place, while exponent is slid all the way right.
+#[inline]
+fn split<U: Uint>(ibm: U) -> (U, U, U) {
+    // Sign bit is always the top bit
+    let sign_bit_mask = U::MAX & !(U::MAX >> 1);
+    // Fraction is always all but the top byte
+    let fraction_mask = U::MAX >> 8;
+    // Exponent is always the 7 bits in the middle
+    let exponent_mask = !sign_bit_mask & !fraction_mask;
+    let exponent_shift = (size_of::<U>() * 8 - 8) as u8;
+    (
+        ibm & sign_bit_mask,
+        (ibm & exponent_mask) >> exponent_shift,
+        ibm & fraction_mask,
+    )
+}
+
 /// Convert a native-endian IBM 32-bit float to a native-endian IEEE-754 32-bit float.
 pub fn ibm32ieee32(ibm: u32) -> u32 {
-    // Overflow and underflow possible; rounding can only happen in subnormal cases.
-    let ieee_sign = ibm & 0x8000_0000;
-    let mut ibm_frac = ibm & 0x00ff_ffff;
+    let (sign, ibm_exponent, ibm_fraction) = split(ibm);
 
     // Quick return for zeros.
-    if ibm_frac == 0 {
-        return ieee_sign;
+    if ibm_fraction == 0 {
+        return sign;
     }
 
-    // Reduce shift by 2 to get a binary exponent from the hex exponent.
-    let mut ibm_exponent = ((ibm & 0x7f00_0000) >> 22) as i32;
-
-    // Normalise significand, then count leading zeros in top hex digit.
-    let mut top_digit = ibm_frac & 0x00f0_0000;
-    while top_digit == 0 {
-        ibm_frac <<= 4;
-        ibm_exponent -= 4;
-        top_digit = ibm_frac & 0x00f0_0000
-    }
-    let leading_zeroes = (0x55af >> (top_digit >> 19)) & 3;
-    ibm_frac = ibm_frac.overflowing_shl(leading_zeroes).0;
+    // Normalise significand, adjusting exponent to match, and offsetting by 2
+    let (ibm_exponent, ibm_fraction) = {
+        let shift = ibm_fraction.leading_zeros() as i32 - 8;
+        ((ibm_exponent << 2) as i32 - shift, ibm_fraction << shift)
+    };
 
     // Adjust exponents for the differing biases of the formats: the IBM bias is 64 hex digits, or
     // 256 bits. The IEEE bias is 127. The difference is -129; we get an extra -1 from the different
@@ -28,15 +68,15 @@ pub fn ibm32ieee32(ibm: u32) -> u32 {
     // for an evil trick that saves an operation on the fast path: we don't remove the hidden 1-bit
     // from the IEEE significand, so in the final addition that extra bit ends in incrementing the
     // exponent by one.
-    let ieee_exponent = ibm_exponent - 131 - leading_zeroes as i32;
+    let ieee_exponent = ibm_exponent - 131;
+
     if ieee_exponent >= 254 {
         // overflow
-        ieee_sign.wrapping_add(0x7f80_0000)
+        sign.wrapping_add(0x7f80_0000)
     } else if ieee_exponent >= 0 {
         // normal case; no shift needed
-        let ieee_frac = ibm_frac;
-        ieee_sign
-            .wrapping_add((ieee_exponent as u32) << 23)
+        let ieee_frac = ibm_fraction;
+        sign.wrapping_add((ieee_exponent as u32) << 23)
             .wrapping_add(ieee_frac)
     } else if ieee_exponent >= -32 {
         // Possible subnormal result; shift significand right by -ieee_exponent bits, rounding the
@@ -74,38 +114,34 @@ pub fn ibm32ieee32(ibm: u32) -> u32 {
         // shift by one to get the rounded value. Note that this approach avoids the possibility of
         // trying to shift a width-32 value by 32, which can be problematic (see C99 6.5.7p3).
         let mask = !((0xffff_fffd) << (-1 - ieee_exponent) as u32);
-        let round_up = if ibm_frac & mask > 0 { 1 } else { 0 };
-        let ieee_frac = (ibm_frac >> ((-1i32) - ieee_exponent) as u32).wrapping_add(round_up) >> 1;
-        ieee_sign.wrapping_add(ieee_frac)
+        let round_up = if ibm_fraction & mask > 0 { 1 } else { 0 };
+        let ieee_frac =
+            (ibm_fraction >> ((-1i32) - ieee_exponent) as u32).wrapping_add(round_up) >> 1;
+        sign.wrapping_add(ieee_frac)
     } else {
         // Underflow to zero
-        ieee_sign
+        sign
     }
 }
 
 pub fn ibm32ieee64(ibm: u32) -> u64 {
     // This is the simplest of the four cases: there's no need to check for overflow or underflow,
     // no possibility of subnormal output, and never any rounding.
+    let (sign, ibm_exponent, ibm_fraction) = split(ibm);
 
-    let ieee_sign = ((ibm & 0x8000_0000) as u64) << 32;
-    let mut ibm_frac = ibm & 0x00ff_ffff;
+    // Extend the sign
+    let sign = (sign as u64) << 32;
 
     // Quick return for zeros.
-    if ibm_frac == 0 {
-        return ieee_sign;
+    if ibm_fraction == 0 {
+        return sign;
     }
 
-    // Reduce shift by 2 to get a binary exponent from the hex exponent.
-    let mut ibm_exponent = ((ibm & 0x7f00_0000) >> 22) as i32;
-
-    // Normalise significand, then count leading zeros in top hex digit.
-    let mut top_digit = ibm_frac & 0x00f0_0000;
-    while top_digit == 0 {
-        ibm_frac <<= 4;
-        ibm_exponent -= 4;
-        top_digit = ibm_frac & 0x00f0_0000
-    }
-    let leading_zeroes = (0x55af >> (top_digit >> 19)) & 3;
+    // Normalise significand, adjusting exponent to match, and offsetting by 2
+    let (ibm_exponent, ibm_fraction) = {
+        let shift = ibm_fraction.leading_zeros() as i32 - 8;
+        ((ibm_exponent << 2) as i32 - shift, ibm_fraction << shift)
+    };
 
     // Adjust exponents for the differing biases of the formats: the IBM bias is 64 hex digits, or
     // 256 bits. The IEEE bias is 1023. The difference is 767; we get an extra -1 from the different
@@ -114,41 +150,34 @@ pub fn ibm32ieee64(ibm: u32) -> u64 {
     // significand, so in the final addition that extra bit ends in incrementing the exponent by
     // one.
 
-    let ieee_exponent = ibm_exponent + 765 - leading_zeroes;
-    let ieee_fraction = (ibm_frac as u64) << (29 + leading_zeroes) as u64;
-    ieee_sign
-        .wrapping_add((ieee_exponent as u64) << 52)
+    let ieee_exponent = ibm_exponent + 765;
+    let ieee_fraction = (ibm_fraction as u64) << 29;
+    sign.wrapping_add((ieee_exponent as u64) << 52)
         .wrapping_add(ieee_fraction)
 }
 
 // IBM double-precision bit pattern to IEEE single-precision bit pattern.
 pub fn ibm64ieee32(ibm: u64) -> u32 {
     // Overflow and underflow possible; rounding can occur in both normal and subnormal cases.
-    let ieee_sign = ((ibm & 0x8000_0000_0000_0000) >> 32) as u32;
-    let mut ibm_fraction = ibm & 0x00ff_ffff_ffff_ffff;
+    let (sign, ibm_exponent, ibm_fraction) = split(ibm);
+
+    // Trim the sign
+    let sign = (sign >> 32) as u32;
 
     // Quick return for zeros.
     if ibm_fraction == 0 {
-        return ieee_sign;
+        return sign;
     }
 
-    // Reduce shift by 2 to get a binary exponent from the hex exponent.
-    let mut ibm_exponent = ((ibm & 0x7f00_0000_0000_0000) >> 54) as i32;
+    let (ibm_exponent, ibm_fraction) = {
+        let shift = ibm_fraction.leading_zeros() as i32 - 8;
+        ((ibm_exponent << 2) as i32 - shift, ibm_fraction << shift)
+    };
 
-    // Normalise significand, then count leading zeros in top hex digit.
-    let mut top_digit = ibm_fraction & 0x00f0_0000_0000_0000;
-    while top_digit == 0 {
-        ibm_fraction <<= 4;
-        ibm_exponent -= 4;
-        top_digit = ibm_fraction & 0x00f0_0000_0000_0000
-    }
-    let leading_zeros = 0x55af >> (top_digit >> 51) & 3;
-    ibm_fraction <<= leading_zeros as u64;
-
-    let ieee_exponent = ibm_exponent - 131 - leading_zeros;
+    let ieee_exponent = ibm_exponent - 131;
     if ieee_exponent >= 254 {
         // Overflow
-        ieee_sign.wrapping_add(0x7f80_0000)
+        sign.wrapping_add(0x7f80_0000)
     } else if ieee_exponent >= 0 {
         // Normal case; shift right 32, with round-ties-to-even
         let round_up = if ibm_fraction & 0x0001_7fff_ffff > 0 {
@@ -157,8 +186,7 @@ pub fn ibm64ieee32(ibm: u64) -> u32 {
             0
         };
         let ieee_frac = ((ibm_fraction >> 31).wrapping_add(round_up) >> 1) as u32;
-        ieee_sign
-            .wrapping_add((ieee_exponent as u32) << 23)
+        sign.wrapping_add((ieee_exponent as u32) << 23)
             .wrapping_add(ieee_frac)
     } else if ieee_exponent >= -32 {
         // Possible subnormal; shift right with round-ties-to-even
@@ -167,10 +195,10 @@ pub fn ibm64ieee32(ibm: u64) -> u32 {
         let ieee_frac = ((ibm_fraction >> (31 - ieee_exponent) as u64)
             .wrapping_add(round_up as u64)
             >> 1) as u32;
-        ieee_sign.wrapping_add(ieee_frac)
+        sign.wrapping_add(ieee_frac)
     } else {
         // Underflow to zero
-        ieee_sign
+        sign
     }
 }
 
@@ -178,36 +206,26 @@ pub fn ibm64ieee32(ibm: u64) -> u32 {
 pub fn ibm64ieee64(ibm: u64) -> u64 {
     // No overflow or underflow possible, but the precision of the so we'll frequently need to
     // round.
-    let ieee_sign = ibm & 0x8000_0000_0000_0000;
-    let mut ibm_fraction = ibm & 0x00ff_ffff_ffff_ffff;
+    let (sign, ibm_exponent, ibm_fraction) = split(ibm);
 
     // Quick return for zeros.
     if ibm_fraction == 0 {
-        return ieee_sign;
+        return sign;
     }
 
-    // Reduce shift by 2 to get a binary exponent from the hex exponent.
-    let mut ibm_exponent = ((ibm & 0x7f00_0000_0000_0000) >> 54) as i32;
+    let (ibm_exponent, ibm_fraction) = {
+        let shift = ibm_fraction.leading_zeros() as i32 - 8;
+        ((ibm_exponent << 2) as i32 - shift, ibm_fraction << shift)
+    };
 
-    // Normalise significand, then count leading zeros in top hex digit.
-    let mut top_digit = ibm_fraction & 0x00f0_0000_0000_0000;
-    while top_digit == 0 {
-        ibm_fraction <<= 4;
-        ibm_exponent -= 4;
-        top_digit = ibm_fraction & 0x00f0_0000_0000_0000
-    }
-
-    let leading_zeros = (0x55af >> (top_digit >> 51)) & 3;
-    ibm_fraction <<= leading_zeros;
-    let ieee_expt = ibm_exponent + 765 - leading_zeros;
+    let ieee_exponent = ibm_exponent + 765;
 
     // Right-shift by 3 bits (the difference between the IBM and IEEE significand lengths), rounding
     // with round-ties-to-even.
     let round_up = if (ibm_fraction & 0xb) > 0 { 1 } else { 0 };
-    let ieee_frac = (ibm_fraction >> 2).wrapping_add(round_up) >> 1;
-    ieee_sign
-        .wrapping_add((ieee_expt as u64) << 52)
-        .wrapping_add(ieee_frac)
+    let ieee_fraction = (ibm_fraction >> 2).wrapping_add(round_up) >> 1;
+    sign.wrapping_add((ieee_exponent as u64) << 52)
+        .wrapping_add(ieee_fraction)
 }
 
 #[cfg(test)]
