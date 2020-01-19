@@ -5,7 +5,7 @@ readme = "README.md"
 version = "0.1.0"
 authors = ["Will Glynn <will@willglynn.com>"]
 edition = "2018"
-exclude = ["fuzz/**/*", "ibm2ieee-sys/**/*"]
+exclude = [".github", "fuzz/**/*", "ibm2ieee-sys/**/*"]
 license = "BSD-3-Clause"
 repository = "https://github.com/willglynn/ibmfloat"
 
