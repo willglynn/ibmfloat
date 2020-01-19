@@ -64,7 +64,8 @@ assert_eq!(native_float, 1.0f64);
 
 ## Development
 
-Please use `cargo test`, `cargo clippy`, and `rustfmt` as you go.
+Please use `cargo test`, `cargo clippy`, and `cargo fmt` as you go. Please also `cargo test --no-default-features` to
+prevent accidental breakage for `#![no_std]` users. GitHub Actions runs each of these commands on push. 
 
 [`cargo fuzz`](https://github.com/rust-fuzz/cargo-fuzz) covers each of the four IBM to IEEE conversion paths, comparing
 them to `ibm2ieee.c`'s output. Please run them as needed if you tinker with that logic.
