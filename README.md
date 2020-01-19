@@ -98,5 +98,6 @@ $ cargo +nightly fuzz run ibm64ieee64
 Additional references:
 
 * [ESA/390 Enhanced Floating Point Support: An
-  Overview](ftp://public.dhe.ibm.com/software/websphere/awdtools/hlasm/sh93fpov.pdf) is an excellent introduction
+  Overview](http://ftpmirror.your.org/pub/misc/ftp.software.ibm.com/software/websphere/awdtools/hlasm/sh93fpov.pdf) is
+  an excellent introduction
 * [Hercules](http://www.hercules-390.org) implements IBM floating point hardware in C
