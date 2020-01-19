@@ -10,6 +10,24 @@ and it can be disabled to support `#![no_std]` environments.
 The conversion processes and much of the test suite are derived from the
 [Python `ibm2ieee` library](https://github.com/enthought/ibm2ieee).
 
+## Performance
+
+Representative results from a laptop:
+
+```console
+$ cargo bench
+…
+F32 to f32              time:   [6.7323 ns 6.8545 ns 6.9941 ns]                        
+
+F32 to f64              time:   [2.6318 ns 2.6932 ns 2.7597 ns]                        
+
+F64 to f32              time:   [7.2901 ns 7.3978 ns 7.5129 ns]                        
+
+F64 to f64              time:   [3.3132 ns 3.3889 ns 3.4657 ns]                        
+```
+
+Conversions to `f32` are more expensive than conversions to `f64`.
+
 ## Usage
 
 ### 32-bit floats
