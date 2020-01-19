@@ -274,11 +274,3 @@ fn python_test_cases() {
         testcase.verify();
     }
 }
-
-#[cfg(feature = "std")]
-#[test]
-fn python_random_test_cases() {
-    for testcase in include!("random_double_to_single.txt") {
-        testcase.verify();
-    }
-}

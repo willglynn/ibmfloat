@@ -29,11 +29,3 @@ fn python_test_cases() {
         testcase.verify();
     }
 }
-
-#[cfg(feature = "std")]
-#[test]
-fn python_random_test_cases() {
-    for testcase in include!("random_single_to_double.txt") {
-        testcase.verify();
-    }
-}
