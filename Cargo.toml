@@ -2,7 +2,7 @@
 name = "ibmfloat"
 description = "IBM floating point number types"
 readme = "README.md"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Will Glynn <will@willglynn.com>"]
 edition = "2018"
 exclude = [".github", "fuzz/**/*", "ibm2ieee-sys/**/*"]
