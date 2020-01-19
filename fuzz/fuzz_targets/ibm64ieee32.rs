@@ -5,11 +5,7 @@ use libfuzzer_sys::fuzz_target;
 use ibmfloat::*;
 
 // Pull in the C library
-mod c {
-    extern "C" {
-        pub fn ibm64ieee32(ibm: u64) -> u32;
-    }
-}
+use ibm2ieee_sys as c;
 
 fuzz_target!(|input: [u8; 8]| {
     let v = u64::from_be_bytes(input);

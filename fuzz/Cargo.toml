@@ -11,9 +11,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.2"
 ibmfloat = { path = ".." }
-
-[build-dependencies]
-cc = { version = "1.0", features = ["parallel"] }
+ibm2ieee-sys = { path = "../ibm2ieee-sys" }
 
 [workspace]
 members = ["."]

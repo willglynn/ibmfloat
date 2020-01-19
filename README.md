@@ -15,15 +15,10 @@ The conversion processes and much of the test suite are derived from the
 Representative results from a laptop:
 
 ```console
-$ cargo bench
-…
-F32 to f32              time:   [6.7323 ns 6.8545 ns 6.9941 ns]                        
-
-F32 to f64              time:   [2.6318 ns 2.6932 ns 2.7597 ns]                        
-
-F64 to f32              time:   [7.2901 ns 7.3978 ns 7.5129 ns]                        
-
-F64 to f64              time:   [3.3132 ns 3.3889 ns 3.4657 ns]                        
+F32 to f32              time:   [6.7092 ns 6.7734 ns 6.8454 ns]                        
+F32 to f64              time:   [2.4642 ns 2.4965 ns 2.5326 ns]                        
+F64 to f32              time:   [7.2500 ns 7.3315 ns 7.4169 ns]                        
+F64 to f64              time:   [2.7761 ns 2.8028 ns 2.8342 ns]                        
 ```
 
 Conversions to `f32` are more expensive than conversions to `f64`.
@@ -85,8 +80,17 @@ assert_eq!(native_float, 1.0f64);
 Please use `cargo test`, `cargo clippy`, and `cargo fmt` as you go. Please also `cargo test --no-default-features` to
 prevent accidental breakage for `#![no_std]` users. GitHub Actions runs each of these commands on push. 
 
+`ibm2ieee-sys/` contains a crate wrapping `ibm2ieee.c`, tests which compare `ibm2ieee.c`'s conversion to `ibmfloat`'s
+conversions over random values, and benchmarks of both libraries.
+
+```console
+$ cd ibm2ieee-sys/
+$ cargo test
+$ cargo bench
+```
+
 [`cargo fuzz`](https://github.com/rust-fuzz/cargo-fuzz) covers each of the four IBM to IEEE conversion paths, comparing
-them to `ibm2ieee.c`'s output. Please run them as needed if you tinker with that logic.
+them to `ibm2ieee-sys`. Please run them as needed if you tinker with that logic.
 
 ```console
 $ cargo +nightly fuzz run ibm32ieee32
