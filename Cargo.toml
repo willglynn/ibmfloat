@@ -13,3 +13,11 @@ repository = "https://github.com/willglynn/ibmfloat"
 [features]
 default = ["std"]
 std = []
+
+[dev-dependencies]
+criterion = "0.3"
+rand = "0.7"
+
+[[bench]]
+name = "conversion"
+harness = false
