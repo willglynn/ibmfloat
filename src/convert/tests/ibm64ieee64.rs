@@ -24,6 +24,7 @@ fn round_ties_to_even() {
     }
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn python_test_cases() {
     for testcase in vec![
@@ -250,6 +251,7 @@ fn python_test_cases() {
     }
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn python_random_test_cases() {
     for testcase in include!("random_double_to_double.txt") {

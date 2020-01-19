@@ -9,3 +9,7 @@ license = "BSD-3-Clause"
 repository = "https://github.com/willglynn/ibmfloat"
 
 [dependencies]
+
+[features]
+default = ["std"]
+std = []

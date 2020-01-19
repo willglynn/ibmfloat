@@ -1,6 +1,5 @@
 #![deny(
     missing_docs,
-    missing_debug_implementations,
     missing_copy_implementations,
     trivial_casts,
     trivial_numeric_casts,
@@ -9,6 +8,8 @@
     unused_import_braces,
     unused_qualifications
 )]
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "std", deny(missing_debug_implementations))]
 
 //! A Rust library for [IBM floating point
 //! numbers](https://en.wikipedia.org/wiki/IBM_hexadecimal_floating_point), specifically focused on
@@ -16,8 +17,11 @@
 //!
 //! See [`F32`](struct.F32.html) for 32-bit floats and [`F64`](struct.F64.html) for 64-bit floats.
 
-use std::cmp::Ordering;
-use std::fmt;
+#[cfg(feature = "std")]
+use std::{cmp, fmt};
+
+#[cfg(not(feature = "std"))]
+use core::cmp;
 
 mod convert;
 
@@ -196,6 +200,7 @@ macro_rules! float {
     ($t:ty) => {
         // Convert everything to an f64 and implement Debug, PartialEq, PartialOrd over top
 
+        #[cfg(feature = "std")]
         impl fmt::Debug for $t {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f64::from(*self).fmt(f)
@@ -209,7 +214,7 @@ macro_rules! float {
         }
 
         impl PartialOrd for $t {
-            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
                 f64::from(*self).partial_cmp(&f64::from(*other))
             }
         }

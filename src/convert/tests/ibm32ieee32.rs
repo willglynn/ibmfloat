@@ -48,6 +48,7 @@ fn possible_subnormal() {
     }
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn python_test_cases() {
     for testcase in vec![
@@ -220,6 +221,7 @@ fn python_test_cases() {
     }
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn python_random_test_cases() {
     for testcase in include!("random_single_to_single.txt") {

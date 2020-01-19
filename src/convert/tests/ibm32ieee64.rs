@@ -14,7 +14,7 @@ impl Testcase {
 
 #[test]
 fn python_test_cases() {
-    for testcase in vec![
+    for testcase in &[
         Testcase(0x00000000, 0x0000000000000000),
         Testcase(0x80000000, 0x8000000000000000),
         Testcase(0x00000001, 0x2e70000000000000),
@@ -30,6 +30,7 @@ fn python_test_cases() {
     }
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn python_random_test_cases() {
     for testcase in include!("random_single_to_double.txt") {

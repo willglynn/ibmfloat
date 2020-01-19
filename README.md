@@ -4,7 +4,8 @@
 A Rust library for [IBM floating point numbers](https://en.wikipedia.org/wiki/IBM_hexadecimal_floating_point),
 specifically focused on converting them to IEEE-754 floating point values.
  
-This library has no C dependencies or `unsafe` code.
+This crate has no Rust dependencies, no C dependencies, and no `unsafe` code. Its `std` feature is enabled by default,
+and it can be disabled to support `#![no_std]` environments.
 
 The conversion processes and much of the test suite are derived from the
 [Python `ibm2ieee` library](https://github.com/enthought/ibm2ieee).
