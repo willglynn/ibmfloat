@@ -1,0 +1,11 @@
+[package]
+name = "ibmfloat"
+description = "IBM floating point number types, especially including conversion to IEEE-754 floats"
+version = "0.1.0"
+authors = ["Will Glynn <will@willglynn.com>"]
+edition = "2018"
+exclude = ["fuzz/**/*"]
+license = "BSD-3-Clause"
+repository = "https://github.com/willglynn/ibmfloat"
+
+[dependencies]
