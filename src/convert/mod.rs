@@ -23,10 +23,10 @@ trait Uint:
 }
 
 impl Uint for u32 {
-    const MAX: u32 = u32::max_value();
+    const MAX: u32 = u32::MAX;
 }
 impl Uint for u64 {
-    const MAX: u64 = u64::max_value();
+    const MAX: u64 = u64::MAX;
 }
 
 /// Split an IBM float represented at uint U into its (sign, exponent, fraction).
