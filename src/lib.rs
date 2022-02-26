@@ -122,7 +122,7 @@ impl F32 {
     /// assert_eq!(native_float, 1.0f64);
     /// ```
     #[inline]
-    pub fn from_bits(value: u32) -> Self {
+    pub const fn from_bits(value: u32) -> Self {
         Self(value)
     }
 
@@ -134,7 +134,7 @@ impl F32 {
     /// assert_eq!(foreign_float.to_bits(), 0x46000001);
     /// ```
     #[inline]
-    pub fn to_bits(self) -> u32 {
+    pub const fn to_bits(self) -> u32 {
         self.0
     }
 
@@ -149,7 +149,7 @@ impl F32 {
     /// assert_eq!(native_float, 1.0f32);
     /// ```
     #[inline]
-    pub fn from_be_bytes(bytes: [u8; 4]) -> Self {
+    pub const fn from_be_bytes(bytes: [u8; 4]) -> Self {
         Self(u32::from_be_bytes(bytes))
     }
 
@@ -162,7 +162,7 @@ impl F32 {
     /// assert_eq!(foreign_float.to_be_bytes(), [0x46, 0, 0, 1]);
     /// ```
     #[inline]
-    pub fn to_be_bytes(self) -> [u8; 4] {
+    pub const fn to_be_bytes(self) -> [u8; 4] {
         self.0.to_be_bytes()
     }
 }
@@ -203,7 +203,7 @@ impl F64 {
     /// assert_eq!(native_float, 1.0f64);
     /// ```
     #[inline]
-    pub fn from_bits(value: u64) -> Self {
+    pub const fn from_bits(value: u64) -> Self {
         Self(value)
     }
 
@@ -215,7 +215,7 @@ impl F64 {
     /// assert_eq!(foreign_float.to_bits(), 0x4110000000000000);
     /// ```
     #[inline]
-    pub fn to_bits(self) -> u64 {
+    pub const fn to_bits(self) -> u64 {
         self.0
     }
 
@@ -230,7 +230,7 @@ impl F64 {
     /// assert_eq!(native_float, 1.0f64);
     /// ```
     #[inline]
-    pub fn from_be_bytes(bytes: [u8; 8]) -> Self {
+    pub const fn from_be_bytes(bytes: [u8; 8]) -> Self {
         Self(u64::from_be_bytes(bytes))
     }
 
@@ -243,7 +243,7 @@ impl F64 {
     /// assert_eq!(foreign_float.to_be_bytes(), [0x41, 0x10, 0, 0, 0, 0, 0, 0]);
     /// ```
     #[inline]
-    pub fn to_be_bytes(self) -> [u8; 8] {
+    pub const fn to_be_bytes(self) -> [u8; 8] {
         self.0.to_be_bytes()
     }
 }
