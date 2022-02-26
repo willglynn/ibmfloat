@@ -1,55 +1,35 @@
 #[cfg(not(feature = "std"))]
-use core::{
-    mem::size_of,
-    ops::{BitAnd, Not, Shl, Shr, Sub},
-};
+use core::mem::size_of;
 #[cfg(feature = "std")]
-use std::{
-    mem::size_of,
-    ops::{BitAnd, Not, Shl, Shr, Sub},
-};
+use std::mem::size_of;
 
-trait Uint:
-    Copy
-    + Sized
-    + BitAnd<Self, Output = Self>
-    + Shr<u8, Output = Self>
-    + Shl<u8, Output = Self>
-    + Not<Output = Self>
-    + Sub<Self, Output = Self>
-    + From<u8>
-{
-    const MAX: Self;
+macro_rules! split {
+    ($U:ty, $name:ident) => {
+        /// Split an IBM float represented at uint U into its (sign, exponent, fraction).
+        /// Sign and fraction are left in place, while exponent is slid all the way right.
+        #[inline]
+        const fn $name(ibm: $U) -> ($U, $U, $U) {
+            // Sign bit is always the top bit
+            let sign_bit_mask = <$U>::MAX & !(<$U>::MAX >> 1);
+            // Fraction is always all but the top byte
+            let fraction_mask = <$U>::MAX >> 8;
+            // Exponent is always the 7 bits in the middle
+            let exponent_mask = !sign_bit_mask & !fraction_mask;
+            let exponent_shift = (size_of::<$U>() * 8 - 8) as u8;
+            (
+                ibm & sign_bit_mask,
+                (ibm & exponent_mask) >> exponent_shift,
+                ibm & fraction_mask,
+            )
+        }
+    };
 }
-
-impl Uint for u32 {
-    const MAX: u32 = u32::MAX;
-}
-impl Uint for u64 {
-    const MAX: u64 = u64::MAX;
-}
-
-/// Split an IBM float represented at uint U into its (sign, exponent, fraction).
-/// Sign and fraction are left in place, while exponent is slid all the way right.
-#[inline]
-fn split<U: Uint>(ibm: U) -> (U, U, U) {
-    // Sign bit is always the top bit
-    let sign_bit_mask = U::MAX & !(U::MAX >> 1);
-    // Fraction is always all but the top byte
-    let fraction_mask = U::MAX >> 8;
-    // Exponent is always the 7 bits in the middle
-    let exponent_mask = !sign_bit_mask & !fraction_mask;
-    let exponent_shift = (size_of::<U>() * 8 - 8) as u8;
-    (
-        ibm & sign_bit_mask,
-        (ibm & exponent_mask) >> exponent_shift,
-        ibm & fraction_mask,
-    )
-}
+split!(u32, split32);
+split!(u64, split64);
 
 /// Convert a native-endian IBM 32-bit float to a native-endian IEEE-754 32-bit float.
-pub fn ibm32ieee32(ibm: u32) -> u32 {
-    let (sign, ibm_exponent, ibm_fraction) = split(ibm);
+pub const fn ibm32ieee32(ibm: u32) -> u32 {
+    let (sign, ibm_exponent, ibm_fraction) = split32(ibm);
 
     // Quick return for zeros.
     if ibm_fraction == 0 {
@@ -124,10 +104,10 @@ pub fn ibm32ieee32(ibm: u32) -> u32 {
     }
 }
 
-pub fn ibm32ieee64(ibm: u32) -> u64 {
+pub const fn ibm32ieee64(ibm: u32) -> u64 {
     // This is the simplest of the four cases: there's no need to check for overflow or underflow,
     // no possibility of subnormal output, and never any rounding.
-    let (sign, ibm_exponent, ibm_fraction) = split(ibm);
+    let (sign, ibm_exponent, ibm_fraction) = split32(ibm);
 
     // Extend the sign
     let sign = (sign as u64) << 32;
@@ -157,9 +137,9 @@ pub fn ibm32ieee64(ibm: u32) -> u64 {
 }
 
 // IBM double-precision bit pattern to IEEE single-precision bit pattern.
-pub fn ibm64ieee32(ibm: u64) -> u32 {
+pub const fn ibm64ieee32(ibm: u64) -> u32 {
     // Overflow and underflow possible; rounding can occur in both normal and subnormal cases.
-    let (sign, ibm_exponent, ibm_fraction) = split(ibm);
+    let (sign, ibm_exponent, ibm_fraction) = split64(ibm);
 
     // Trim the sign
     let sign = (sign >> 32) as u32;
@@ -203,10 +183,10 @@ pub fn ibm64ieee32(ibm: u64) -> u32 {
 }
 
 // IBM double-precision bit pattern to IEEE double-precision bit pattern.
-pub fn ibm64ieee64(ibm: u64) -> u64 {
+pub const fn ibm64ieee64(ibm: u64) -> u64 {
     // No overflow or underflow possible, but the precision of the so we'll frequently need to
     // round.
-    let (sign, ibm_exponent, ibm_fraction) = split(ibm);
+    let (sign, ibm_exponent, ibm_fraction) = split64(ibm);
 
     // Quick return for zeros.
     if ibm_fraction == 0 {
