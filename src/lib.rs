@@ -259,6 +259,27 @@ macro_rules! float {
             }
         }
 
+        #[cfg(feature = "std")]
+        impl fmt::Display for $t {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f64::from(*self).fmt(f)
+            }
+        }
+
+        #[cfg(feature = "std")]
+        impl fmt::LowerExp for $t {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f64::from(*self).fmt(f)
+            }
+        }
+
+        #[cfg(feature = "std")]
+        impl fmt::UpperExp for $t {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f64::from(*self).fmt(f)
+            }
+        }
+
         impl PartialEq for $t {
             fn eq(&self, other: &Self) -> bool {
                 f64::from(*self).eq(&f64::from(*other))
@@ -302,3 +323,6 @@ impl From<F64> for f64 {
         f64::from_bits(convert::ibm64ieee64(v.0))
     }
 }
+
+#[cfg(all(test, feature = "std"))]
+mod std_tests;
