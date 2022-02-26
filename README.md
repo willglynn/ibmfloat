@@ -55,7 +55,7 @@ assert_eq!(native_float, -118.625f32);
 
 ### 64-bit floats
 
-`ibmfloat::64` represents a 64-bit IBM floating point number. It supports the conversions:
+`ibmfloat::F64` represents a 64-bit IBM floating point number. It supports the conversions:
 
 * Transmuting to/from a `u64` via `from_bits()`, `to_bits()`
 * Transmuting to/from a big-endian `[u8; 8]` via `from_be_bytes()`/`to_be_bytes()`
