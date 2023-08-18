@@ -77,6 +77,9 @@ use core::cmp;
 
 mod convert;
 
+/// A module supporting SAS® floating point numbers, based on IBM base-16 floating point numbers.
+pub mod sas;
+
 /// A 32-bit IBM floating point number.
 ///
 /// This type supports the conversions:
