@@ -133,8 +133,15 @@ impl F64 {
     /// let native_float = f64::from(foreign_float);
     /// assert!(native_float.is_nan());
     /// ```
+    #[inline]
     pub const fn from_be_bytes(bytes: [u8; 8]) -> Self {
         Self(super::F64::from_be_bytes(bytes))
+    }
+
+    /// Transmute a native-endian `u64` into an `F64`.
+    #[inline]
+    pub const fn from_bits(bits: u64) -> Self {
+        Self(super::F64::from_bits(bits))
     }
 
     /// Transmute this `F64` to a native-endian `u64`.
@@ -145,6 +152,11 @@ impl F64 {
 
     /// Return the missing value representation, if applicable.
     pub fn missing_value(&self) -> Option<MissingValue> {
+        // A missing value is followed by all zeros.
+        if (self.0 .0 & 0x00FFFFFF_FFFFFFFF) != 0 {
+            return None;
+        }
+        // The missing value comes from the sign/exponent byte.
         let high = ((self.0 .0 >> 56) & 0x7F) as u8;
         MissingValue::try_from(high).ok()
     }
@@ -156,13 +168,15 @@ impl F64 {
 
     /// Return whether the value is a NaN representation.
     pub fn is_nan(&self) -> bool {
-        f64::from(self.0).is_nan() || self.is_missing_value()
+        self.is_missing_value()
     }
 }
 
 impl From<F64> for f64 {
     fn from(value: F64) -> f64 {
         if let Some(_which) = value.missing_value() {
+            // The missing value is encoded in a IEEE-754 float by bitwise negating
+            // its value and placing it after two 0xFF bytes.
             let code = !_which.code() as u64;
             let bits = 0xFFFF0000_00000000 | (code << 40);
             f64::from_bits(bits)
